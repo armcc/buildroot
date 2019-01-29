@@ -1,0 +1,36 @@
+From d47f6b84ec3f8a8b8c164e47e7b3a98e09318066 Mon Sep 17 00:00:00 2001
+From: Andre McCurdy <armccurdy@gmail.com>
+Date: Mon, 28 Jan 2019 17:38:54 -0800
+Subject: [PATCH] disable ARM unaligned access by default
+
+Set the default state of the -munaligned-access command line option
+to prevent reading or writing 16 or 32 bits values direcly from
+addresses which are not 16 or 32 bit aligned (which the gcc would
+otherwise do by default for ARMv6 and above).
+
+Note that this patch is taken from the original Intel Puma6 toolchain
+and the reasons behind it are not completely clear.
+
+  https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html#ARM-Options
+
+Signed-off-by: Andre McCurdy <armccurdy@gmail.com>
+---
+ gcc/config/arm/arm.opt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/config/arm/arm.opt b/gcc/config/arm/arm.opt
+index d80f1f1..563b9e0 100644
+--- a/gcc/config/arm/arm.opt
++++ b/gcc/config/arm/arm.opt
+@@ -265,7 +265,7 @@ Avoid overlapping destination and address registers on LDRD instructions
+ that may trigger Cortex-M3 errata.
+ 
+ munaligned-access
+-Target Report Var(unaligned_access) Init(2)
++Target Report Var(unaligned_access) Init(0)
+ Enable unaligned word and halfword accesses to packed data.
+ 
+ mneon-for-64bits
+-- 
+1.9.1
+
