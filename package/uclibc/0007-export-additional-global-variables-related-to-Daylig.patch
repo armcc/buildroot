@@ -1,0 +1,90 @@
+From 4223af0e759f3b73ff4082ce44eaf080451cbe9d Mon Sep 17 00:00:00 2001
+From: Andre McCurdy <armccurdy@gmail.com>
+Date: Thu, 7 Mar 2019 15:22:27 -0800
+Subject: [PATCH] export additional global variables related to Daylight
+ Savings Time ( CBN Mv1 specific )
+
+[Bug Fix] [CH7465LG-774]MAC filtering time frame not match local-time
+
+[Description]
+    When configuring the MAC filtering with specific timeframe (Different times on different days of the week), the selected hours are not corresponding with local time.
+
+    When Daylight saving time option is used, the offset is 2 hours. So to block internet traffic between 11 and 12, I have to select the '9' hour to block internet on my device.
+
+    When Daylight saving time option is NOT used, the offset is 1 hour. So to block internet traffic between 11 and 12, I have to select the '10' hour to block interent on my device.
+    Ziggo use cmConfigDaylightSavingTime shift to local time .(UTC time no change)
+
+[Root Cause]
+    The MAC filtering configure with specific timeframe (Different times on different days of the week) and Daylight Saving Time (DST) option work.
+    The DST shift UTC time to local time, but the MAC filtering timeframe did not synchronize with DST time zone.
+    The selected hours are not corresponding with local time.
+
+[Solution]
+    User sets local time ranges at GUI, system are going to save this local time range into the MAC filter database. And then, system will shift user local time to Greenwich Mean Time and implement to the MAC filter rule. It ~
+    If the time-zone do not changes. It working, but some zones MUST consider Daylight Saving Time.
+    End-user set the MAC filter rule during General time. It occur DST time gap, when MAC filter rule stride across from General time to DST.
+    The DST offset time of MAC filter did not change automatically.
+    End-user MUST considers the DST gap, and shift the DST gap time into the MAC filter rule, when they set MAC filter time rules during the DST.
+
+Signed-off-by: Andre McCurdy <armccurdy@gmail.com>
+---
+ include/time.h        |  6 ++++++
+ libc/misc/time/time.c | 18 ++++++++++++++++++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/include/time.h b/include/time.h
+index 1a14089..26ba8d3 100644
+--- a/include/time.h
++++ b/include/time.h
+@@ -301,6 +301,12 @@ libc_hidden_proto(tzset)
+ # if defined __USE_SVID || defined __USE_XOPEN
+ extern int daylight;
+ extern long int timezone;
++/* CBN_S - 20180816 - Peikang - Shift Local time to UTC */
++extern long int dstOffset[2];
++extern short int dstDay[2];
++extern short int dstWeek[2];
++extern short int dstMonth[2];
++/* CBN_E - 20180816 - Peikang - Shift Local time to UTC */
+ # endif
+ 
+ # ifdef __USE_SVID
+diff --git a/libc/misc/time/time.c b/libc/misc/time/time.c
+index cd18916..8298b3c 100644
+--- a/libc/misc/time/time.c
++++ b/libc/misc/time/time.c
+@@ -1801,6 +1801,13 @@ int daylight = 0;
+ long timezone = 0;
+ char *tzname[2] = { (char *) UTC, (char *) (UTC-1) };
+ 
++/* CBN_S - 20180816 - Peikang - Shift Local time to UTC */
++long int dstOffset[2];
++short int dstDay[2];
++short int dstWeek[2];
++short int dstMonth[2];
++/* CBN_S - 20180816 - Peikang - Shift Local time to UTC */
++
+ __UCLIBC_MUTEX_INIT(_time_tzlock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
+ 
+ rule_struct _time_tzinfo[2];
+@@ -2170,6 +2177,17 @@ DONE:
+ 	daylight = !!_time_tzinfo[1].tzname[0];
+ 	timezone = _time_tzinfo[0].gmt_offset;
+ 
++	/* CBN_S - 20180816 - Peikang - Shift Local time to UTC */
++	dstOffset[0] = _time_tzinfo[0].dst_offset;
++	dstOffset[1] = _time_tzinfo[1].dst_offset;
++	dstDay[0] = _time_tzinfo[0].day;
++	dstDay[1] = _time_tzinfo[1].day;
++	dstWeek[0] = _time_tzinfo[0].week;
++	dstWeek[1] = _time_tzinfo[1].week;
++	dstMonth[0] = _time_tzinfo[0].month;
++	dstMonth[1] = _time_tzinfo[1].month;
++	/* CBN_E - 20180816 - Peikang - Shift Local time to UTC */
++
+ #if (defined(__UCLIBC_HAS_TZ_FILE__) && !defined(__UCLIBC_HAS_TZ_FILE_READ_MANY__)) || \
+ 	defined(__UCLIBC_HAS_TZ_CACHING__)
+ FAST_DONE:
+-- 
+1.9.1
+
