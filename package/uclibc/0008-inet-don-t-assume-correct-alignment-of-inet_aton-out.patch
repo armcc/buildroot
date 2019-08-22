@@ -1,0 +1,31 @@
+From 73320c3578e988bd17255f25f98e906ce7113ff4 Mon Sep 17 00:00:00 2001
+From: Andre McCurdy <armccurdy@gmail.com>
+Date: Wed, 22 May 2019 19:53:47 -0700
+Subject: [PATCH] inet: don't assume correct alignment of inet_aton() output
+ buffer
+
+More gracefully handle cases where inet_aton() is used to write into
+a misaligned output buffer (a field within a packed structure, etc).
+
+Signed-off-by: Andre McCurdy <armccurdy@gmail.com>
+---
+ libc/inet/addr.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/libc/inet/addr.c b/libc/inet/addr.c
+index cd7151a..40930fe 100644
+--- a/libc/inet/addr.c
++++ b/libc/inet/addr.c
+@@ -86,7 +86,8 @@ int inet_aton(const char *cp, struct in_addr *addrptr)
+ 	 *  of the input string, but does not store the result.
+ 	 */
+ 	if (addrptr) {
+-		addrptr->s_addr = htonl(addr);
++		addr = htonl(addr);
++		memcpy(&addrptr->s_addr, &addr, sizeof(in_addr_t));
+ 	}
+ 
+ 	return 1;
+-- 
+1.9.1
+
